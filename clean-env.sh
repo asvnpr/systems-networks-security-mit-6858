@@ -1,4 +1,12 @@
 #!/bin/bash
+
+if [ $# -eq 0 ]; then
+	echo "Usage: $0 BIN CONFIG"
+	echo "clean-env runs the given server binary BIN using the configuration CONFIG in"
+	echo "a pristine environment to ensure predictable memory layout between executions."
+	exit 0
+fi
+
 F="$1"
 shift
 
