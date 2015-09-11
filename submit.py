@@ -9,7 +9,7 @@ KEY_FILE = "submit.token"
 def main(filename):
     # Prompt for key if missing
     if not os.path.exists(KEY_FILE):
-        print "Please visit http://css.csail.mit.edu/6.858/2014/labs/handin.html"
+        print "Please visit http://css.csail.mit.edu/6.858/2015/labs/handin.html"
         print "and enter your API key."
         key = raw_input("Key: ").strip()
         with open(KEY_FILE, "w") as f:
@@ -26,10 +26,10 @@ def main(filename):
         subprocess.check_call(["curl", "-f",
                                "-F", "file=@%s" % filename,
                                "-F", "key=%s" % key,
-                               "http://6858.scripts.mit.edu/submit/handin.py/upload"],
+                               "https://6858.csail.mit.edu/upload"],
                               stdout=null, stderr=null)
     print "Submitted %s." % filename
-    print "Please visit http://css.csail.mit.edu/6.858/2014/labs/handin.html"
+    print "Please visit http://css.csail.mit.edu/6.858/2015/labs/handin.html"
     print "to verify the upload."
 
 if __name__ == "__main__":

@@ -86,8 +86,8 @@ clean:
 	rm -f *.o *.pyc *.bin $(PROGS)
 
 
-lab1-handin.tar.gz: clean
-	tar cf - --transform 's,^\.,lab1,' `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v '/\.git/' | grep -v 'lab[0-9].*\.tar\.gz' | grep -v '/submit.token$$' | grep -v libz3str.so` | gzip > $@
+lab%-handin.tar.gz: clean
+	tar cf - `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v '/\.git/' | grep -v 'lab[0-9].*\.tar\.gz' | grep -v '/submit.token$$' | grep -v libz3str.so` | gzip > $@
 
 .PHONY: prepare-submit
 prepare-submit: lab1-handin.tar.gz
