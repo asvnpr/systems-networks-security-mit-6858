@@ -1,17 +1,57 @@
+# Alejandro Salvador Vega Nogales
+# CCOM4995-001
+# Prof. H. Ortiz 
+# Lab 1 Exercise 1
+
 #
 # [file:#lines]
 # desc
 #
 
-[zookd.c:1612]
-description goes here. for example, the 'buf' variable can be
-overwritten by the 'msg' variable because ...
+[http.c:165]
 
-    <paste offending line(s) of code here>
+`char envvar[512]` is declared in line 121. Later on in line 165 
+we have `sprintf(envvar, "HTTP_%s", buf);`. This line allows us to place
+the value of the http header in envvar, but since sprintf doesn't check the size of
+the string we're sending to envvar and buf has size of 8192 we can exploit this to overflow 
+envvar and overwrite values on the stack. 
 
-[http.c:1512]
-another description.
+To exploit this we would need to send a http request whose header starts with "HTTP-*", 
+507 more characters, 516 more characters to fill the other variables in the stack, and
+the string representing the address with which we want to replace the return address with. 
 
-    <paste offending line(s) of code here>
+This exploit can be prevented with a stack canary. 
 
-# many more come here
+[http.c:282]
+
+`char pn[1024]` is declared on line 276. In line 282, `strcat(pn, name)` is called.
+Since the name var that is passed to the http_serve where strcat is called is of size 1024, 
+and strcat concatenates strings without checking their length, we can cause an overflow on pn.
+
+Potentially, this exploit could not be prevented with stack canaries since a pointer to a function 
+(handler *, line 275) could be overwritten to point to a malicious function. 
+
+
+[http.c:105]
+
+In the function url_decode (http.c:437) we receive some src and dst strings where src is copied to dst. Tracing back the calls we can see that dst is `char reqpath[2048]` (zookd.c:65) in function process_client (zookd.c:61) which is sent to http_request_line (http.c:64) where src is `char *sp1` (`url_decode(reqpath, sp1)` in [http.c:105]. Since sp1 ends up being the URI of the request we could send a URI longer than 2048 characters and overwrite the memory above reqpath in process_client's stack frame. 
+
+Changing of the return address with this exploit could be prevented with stack canaries. 
+
+[http.c:159]
+
+In this line of code we see `url_decode(value, sp)`. Like we saw before url_decode copies a string from the second argument into the first argument, but doesn't check for the size of either. In http_request_headers, `char value[512]` is sent as the first parameter, and sp as the second. Since sp is just the value of part of a request header, this means we could include a long parameter (e.g. Cookie: 'a'*1000), overflow value, and overwrite the stack above value including the return address. 
+
+Modification of the return address could be prevented with a stack canary. 
+
+[http.c:94]
+
+Here we find `envp += sprintf(envp, "REQUEST_METHOD=%s", buf) + 1;`. Since sprintf doesn't check for the size of the string it's sending to envp, we could send a large header that specifies that the request is a GET or POST request and
+overflow envp. This overflow is not that useful because if we trace where this function is called we find it in    
+[zookd.c:70] where it passes `static char env[8192]` to be used as the value of envp. This means we can overflow env, 
+but we won't be able to overwrite memory on the stack. 
+
+A stack canary would not help since the variable we're overflowing is not on the stack. 
+
+
+

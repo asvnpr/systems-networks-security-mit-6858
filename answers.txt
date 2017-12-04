@@ -1,1 +1,15 @@
+# In collaboration with José Reyes Zayas
 ## Place your answers here.
+In exploit-2a.py we take advantage of the overflow in [http.c:159] (`url_decode(value, sp)`)
+by sending a really long string (1024 A's) as part of the header. If we run this code, the server crashes.
+Additionally if we place breakpoints on http_request_headers we can use `next` until we pass url_decode and
+see that the return address is overwritten with A's. 
+
+In exploit-2b.py we take advantage of the overflow in [http.c:282] (`strcat(pn, name)`) by sending a URI
+that is long enough to fill pn without causing an overflow in name (1008 chars + the address we want to insert)
+which causes the value of handler to be overwritten (in this case with the address of http_serve_executable). 
+We tested the program and the server crashed. Additionally by setting breakpoints in http_serve and 
+http_serve_executable we used next to check the value of handler after line 282 and it was 0x8049897 
+(the address of a function in our machines). We also used next to confirm the program continued and 
+called http_serve_executable. We decied to use http_serve_executable since it has the same signature and we could
+potentially use it to gain more control of the program in later labs.
