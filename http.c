@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
+// safe: uses snprintf
 void touch(const char *name) {
     if (access("/tmp/grading", F_OK) < 0)
         return;
@@ -27,6 +28,7 @@ void touch(const char *name) {
         close(fd);
 }
 
+// safe: makes sure to only read count bytes. no buffer to overflow to
 int http_read_line(int fd, char *buf, size_t size)
 {
     size_t i = 0;
@@ -61,6 +63,7 @@ int http_read_line(int fd, char *buf, size_t size)
     return -1;
 }
 
+// this func is called in zookd.c:70. reqpath is 2048 chars
 const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
 {
     static char buf[8192];      /* static variables are not on the stack */
@@ -72,6 +75,7 @@ const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
     if (http_read_line(fd, buf, sizeof(buf)) < 0)
         return "Socket IO error";
 
+    // parse whitespace, insert null terminators
     /* Parse request like "GET /foo.html HTTP/1.0" */
     sp1 = strchr(buf, ' ');
     if (!sp1)
@@ -91,6 +95,8 @@ const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
     if (strcmp(buf, "GET") && strcmp(buf, "POST"))
         return "Unsupported request (not GET or POST)";
 
+
+    // unsafe but buffer envp is not on the stack. maybe fix?
     envp += sprintf(envp, "REQUEST_METHOD=%s", buf) + 1;
     envp += sprintf(envp, "SERVER_PROTOCOL=%s", sp2) + 1;
 
@@ -100,9 +106,9 @@ const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
         *qp = '\0';
         envp += sprintf(envp, "QUERY_STRING=%s", qp + 1) + 1;
     }
-
+    //fix unsafe url_decode
     /* decode URL escape sequences in the requested path into reqpath */
-    url_decode(reqpath, sp1);
+    url_decode(reqpath, sp1, sizeof(reqpath));
 
     envp += sprintf(envp, "REQUEST_URI=%s", reqpath) + 1;
 
@@ -154,15 +160,17 @@ const char *http_request_headers(int fd)
             if (buf[i] == '-')
                 buf[i] = '_';
         }
-
+        // fix url decode
         /* Decode URL escape sequences in the value */
-        url_decode(value, sp);
+        url_decode(value, sp, sizeof(value));
 
+        //fixed sprintf exploit
         /* Store header in env. variable for application code */
         /* Some special headers don't use the HTTP_ prefix. */
         if (strcmp(buf, "CONTENT_TYPE") != 0 &&
             strcmp(buf, "CONTENT_LENGTH") != 0) {
-            sprintf(envvar, "HTTP_%s", buf);
+            int n = sizeof(envvar);
+            snprintf(envvar, n, "HTTP_%s", buf);
             setenv(envvar, value, 1);
         } else {
             setenv(buf, value, 1);
@@ -340,6 +348,7 @@ void http_serve_file(int fd, const char *pn)
     close(filefd);
 }
 
+//strcopy is unsafe. unsure if exploit is possible here
 void dir_join(char *dst, const char *dirname, const char *filename) {
     strcpy(dst, dirname);
     if (dst[strlen(dst) - 1] != '/')
@@ -434,8 +443,9 @@ void http_serve_executable(int fd, const char *pn)
     }
 }
 
-void url_decode(char *dst, const char *src)
+void url_decode(char *dst, const char *src, int size)
 {
+    int i =0;
     for (;;)
     {
         if (src[0] == '%' && src[1] && src[2])
@@ -462,7 +472,13 @@ void url_decode(char *dst, const char *src)
                 break;
         }
 
+        if (i == (size - 1))
+        {
+            break;
+        }
+
         dst++;
+
     }
 }
 

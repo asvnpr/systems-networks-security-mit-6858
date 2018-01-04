@@ -1,9 +1,5 @@
-#include <sys/syscall.h>
-
 #define STRING	"/home/httpd/grades.txt"
 #define STRLEN	22
-//#define ARGV	(STRLEN+1)
-//#define ENVP	(ARGV+4)
 
 .globl main
 	.type	main, @function

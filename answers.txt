@@ -1,5 +1,9 @@
 # In collaboration with José Reyes Zayas
+# Alejandro Salvador Vega Nogales
 ## Place your answers here.
+
+##########################################################################################################################
+# Exercise 2
 In exploit-2a.py we take advantage of the overflow in [http.c:159] (`url_decode(value, sp)`)
 by sending a really long string (1024 A's) as part of the header. If we run this code, the server crashes.
 Additionally if we place breakpoints on http_request_headers we can use `next` until we pass url_decode and
@@ -13,3 +17,27 @@ http_serve_executable we used next to check the value of handler after line 282 
 (the address of a function in our machines). We also used next to confirm the program continued and 
 called http_serve_executable. We decied to use http_serve_executable since it has the same signature and we could
 potentially use it to gain more control of the program in later labs.
+
+##########################################################################################################################
+# Exercise 3
+
+All the bugs in our bugs.txt can be exploited in a similar manner as in this exercise since we can overwrite either a 
+function pointer or a return address to point to our injected binary. Only the overflow in [http.c:94] can't be exploited
+in this way since the buffer isn't in the stack. The vulnerabilities that depend on overwriting the return address can be 
+prevented with stack binaries so these would no longer be usable with the exploit we designed in this exercise
+
+##########################################################################################################################
+# Exercise 4
+
+Since we can still overflow values on the stack without any precaution since stack canaries aren't used we can use this type of 
+exploits in all the bugs described in our bugs.txt except the last bug since the buffer isn't on the stack. 
+
+##########################################################################################################################
+# Exercise 5
+
+Error found in [http.c:344] where `strcpy(dst, dirname)` where dst will contain the path to the script name and dirname is the 
+requested directory. This exploit can happen since the REQUEST_URI can be of length 2048 ([zookd.c:65]) and dst is of length 1024
+([http.c:353]). This exploit is dangerous since strcpy doesn't check the size of it's second argument to make sure it fits in the 
+first buffer so we could overflow this buffer and do evil stuff.
+
+
