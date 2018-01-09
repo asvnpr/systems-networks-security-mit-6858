@@ -15,6 +15,11 @@
 #include <string.h>
 #include <unistd.h>
 
+// bug in og 165 fixed
+// bug in og 282 fixed
+// bug in og 105 fixed
+// bug in og 159 fixed
+
 // safe: uses snprintf
 void touch(const char *name) {
     if (access("/tmp/grading", F_OK) < 0)
@@ -64,7 +69,7 @@ int http_read_line(int fd, char *buf, size_t size)
 }
 
 // this func is called in zookd.c:70. reqpath is 2048 chars
-const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
+const char *http_request_line(int fd, char *reqpath, int rp_size, char *env, size_t *env_len)
 {
     static char buf[8192];      /* static variables are not on the stack */
     char *sp1, *sp2, *qp, *envp = env;
@@ -108,7 +113,7 @@ const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
     }
     //fix unsafe url_decode
     /* decode URL escape sequences in the requested path into reqpath */
-    url_decode(reqpath, sp1, sizeof(reqpath));
+    url_decode(reqpath, sp1, rp_size);
 
     envp += sprintf(envp, "REQUEST_URI=%s", reqpath) + 1;
 
@@ -287,7 +292,7 @@ void http_serve(int fd, const char *name)
     getcwd(pn, sizeof(pn));
     setenv("DOCUMENT_ROOT", pn, 1);
 
-    strcat(pn, name);
+    strncat(pn, name, sizeof(pn) - strlen(pn) - 1);
     split_path(pn);
 
     if (!stat(pn, &st))
@@ -349,8 +354,8 @@ void http_serve_file(int fd, const char *pn)
 }
 
 //strcopy is unsafe. unsure if exploit is possible here
-void dir_join(char *dst, const char *dirname, const char *filename) {
-    strcpy(dst, dirname);
+void dir_join(char *dst, const char *dirname, const char *filename, int size) {
+    strncpy(dst, dirname, size);
     if (dst[strlen(dst) - 1] != '/')
         strcat(dst, "/");
     strcat(dst, filename);
@@ -364,9 +369,9 @@ void http_serve_directory(int fd, const char *pn) {
     int i;
 
     for (i = 0; indices[i]; i++) {
-        dir_join(name, pn, indices[i]);
+        dir_join(name, pn, indices[i], sizeof(name) - strlen(indices[i]) - 1);
         if (stat(name, &st) == 0 && S_ISREG(st.st_mode)) {
-            dir_join(name, getenv("SCRIPT_NAME"), indices[i]);
+            dir_join(name, getenv("SCRIPT_NAME"), indices[i], sizeof(name) - strlen(getenv("SCRIPT_NAME")) - 1);
             break;
         }
     }
