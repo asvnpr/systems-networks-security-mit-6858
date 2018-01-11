@@ -450,8 +450,7 @@ void http_serve_executable(int fd, const char *pn)
 
 void url_decode(char *dst, const char *src, int size)
 {
-    int i =0;
-    for (;;)
+    for (int i = 0; i < (size - 1); i++)
     {
         if (src[0] == '%' && src[1] && src[2])
         {
@@ -477,14 +476,11 @@ void url_decode(char *dst, const char *src, int size)
                 break;
         }
 
-        if (i == (size - 1))
-        {
-            break;
-        }
 
         dst++;
 
     }
+    *dst = '\0';
 }
 
 void env_deserialize(const char *env, size_t len)
